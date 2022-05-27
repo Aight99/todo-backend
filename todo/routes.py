@@ -113,7 +113,10 @@ def add_column():
 
     columns = db.group.find()
     a = [column for column in columns]
-    group_id = a[-1]['group_id'] + 1
+    if a != []:
+        group_id = a[-1]['group_id'] + 1
+    else:
+        group_id = 0
 
     column = db.group.insert_one({
         'group_id': group_id,
@@ -159,3 +162,11 @@ def done_todo():
     }})
 
     return todo.raw_result
+
+
+@main.route('/done_todo', methods=['GET'], strict_slashes=False)
+def get_done_todo():
+    todos = db.event.find({'is_done': True})
+    a = [todo for todo in todos]
+
+    return json.dumps(a, default=str)
