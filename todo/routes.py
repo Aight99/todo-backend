@@ -39,7 +39,8 @@ def add_todo():
         'header': request_data['header'],
         'place': place,
         'tag_id': tag_id,
-        'text': request_data['text']
+        'text': request_data['text'],
+        'is_done': False
     })
 
     return json.dumps(todo.inserted_id , default=str)
@@ -63,7 +64,7 @@ def get_columns():
 
 @main.route('/todos/<int:column_id>', methods=['GET'], strict_slashes=False)
 def get_todos_from_one_column(column_id):
-    todos = db.event.find({'group_id': column_id})
+    todos = db.event.find({'group_id': column_id, 'is_done': False})
     a = [todo for todo in todos]
 
     return json.dumps(a, default=str)
@@ -110,7 +111,6 @@ def add_column():
     group_name = request_data['group_name']
     desk_id = request_data['desk_id']
 
-
     columns = db.group.find()
     a = [column for column in columns]
     group_id = a[-1]['group_id'] + 1
@@ -139,3 +139,23 @@ def edit_column_name():
     }})
 
     return column.raw_result
+
+
+@main.route('/delete_column', methods=['POST'], strict_slashes=False)
+def delete_column():
+    request_data = request.get_json()
+    column_id = request_data['_id']
+    column = db.group.delete_one({'_id': ObjectId(column_id)})
+    db.event.delete_many({'group_id': request_data['group_id']})
+    return column.raw_result
+
+
+@main.route('/done_todo', methods=['POST'], strict_slashes=False)
+def done_todo():
+    request_data = request.get_json()
+    todo_id = request_data['_id']
+    todo = db.event.update_one({'_id': ObjectId(todo_id)}, {'$set': {
+        'is_done': True
+    }})
+
+    return todo.raw_result
