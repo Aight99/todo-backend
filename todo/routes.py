@@ -2,8 +2,6 @@ from flask import Blueprint, jsonify, request, session
 from db import mongo
 import json
 from bson.objectid import ObjectId
-import datetime
-import re
 
 main = Blueprint('main', __name__)
 db = mongo.db
@@ -34,7 +32,7 @@ def add_todo():
     if place == '':
         place = None
 
-    db.event.insert_one({
+    todo = db.event.insert_one({
         'date_begin': date_begin,
         'date_end': date_end,
         'group_id': int(request_data['group_id']),
@@ -44,7 +42,7 @@ def add_todo():
         'text': request_data['text']
     })
 
-    return jsonify({'message': 'da'})
+    return json.dumps(todo.inserted_id , default=str)
 
 
 @main.route('/todos', methods=['GET'], strict_slashes=False)
@@ -75,7 +73,6 @@ def get_todos_from_one_column(column_id):
 def delete_todo():
     request_data = request.get_json()
     todo_id = request_data['_id']
-    print(todo_id)
     todo = db.event.delete_one({'_id': ObjectId(todo_id)})
     return todo.raw_result
 
@@ -105,3 +102,40 @@ def edit_post():
     }})
 
     return todo.raw_result
+
+
+@main.route('/add_column', methods=['POST'], strict_slashes=False)
+def add_column():
+    request_data = request.get_json()
+    group_name = request_data['group_name']
+    desk_id = request_data['desk_id']
+
+
+    columns = db.group.find()
+    a = [column for column in columns]
+    group_id = a[-1]['group_id'] + 1
+
+    column = db.group.insert_one({
+        'group_id': group_id,
+        'group_name': group_name,
+        'desk_id': desk_id
+    })
+
+    return json.dumps([column.inserted_id, group_id], default=str)
+
+
+@main.route('/edit_column', methods=['POST'], strict_slashes=False)
+def edit_column_name():
+    request_data = request.get_json()
+    group_name = request_data['group_name']
+    group__id = request_data['_id']
+    group_id = request_data['group_id']
+    desk_id = request_data['desk_id']
+
+    column = db.group.update_one({'_id': ObjectId(group__id)}, {'$set': {
+        'group_name': group_name,
+        'group_id': group_id,
+        'desk_id': desk_id
+    }})
+
+    return column.raw_result
