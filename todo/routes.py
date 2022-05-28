@@ -156,6 +156,7 @@ def delete_column():
 @main.route('/done_todo', methods=['POST'], strict_slashes=False)
 def done_todo():
     request_data = request.get_json()
+    print(request_data)
     todo_id = request_data['_id']
     todo = db.event.update_one({'_id': ObjectId(todo_id)}, {'$set': {
         'is_done': True
@@ -170,3 +171,31 @@ def get_done_todo():
     a = [todo for todo in todos]
 
     return json.dumps(a, default=str)
+
+
+@main.route('/tags',  methods=['GET'], strict_slashes=False)
+def get_tags():
+    tags = db.tags.find()
+    a = [tag for tag in tags]
+    
+    return json.dumps(a, default=str)
+
+
+@main.route('/add_tag', methods=['POST'], strict_slashes=False)
+def add_tag():
+    request_data = request.get_json()
+    print(request_data)
+
+    tags = db.tags.find()
+    a = [tag for tag in tags]
+    if a != []:
+        tag_id = a[-1]['tag_id'] + 1
+    else:
+        tag_id = 1
+
+    tag = db.tags.insert_one({
+        'tag_id': tag_id,
+        'tag_name': request_data['tag_name']
+    })
+
+    return json.dumps([tag.inserted_id, tag_id], default=str)
