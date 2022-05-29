@@ -27,10 +27,19 @@ def add_todo():
     place = request_data['place']
     date_begin = request_data['date_begin']
     date_end = request_data['date_end']
+
+    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
+    tags = [tag for tag in tags_find]  # list of dict
+
     if tag_id == '':
         tag_id = 0
     if place == '':
         place = None
+
+    tag_name = 'Не выбрано'
+    for tag in tags:
+        if int(tag.get('tag_id')) == int(tag_id):
+            tag_name = tag.get('tag_name')
 
     todo = db.event.insert_one({
         'date_begin': date_begin,
@@ -43,7 +52,7 @@ def add_todo():
         'is_done': False
     })
 
-    return json.dumps(todo.inserted_id , default=str)
+    return json.dumps({'todo_id': todo.inserted_id, 'tag_name': tag_name} , default=str)
 
 
 @main.route('/todos', methods=['GET'], strict_slashes=False)
@@ -65,7 +74,17 @@ def get_columns():
 @main.route('/todos/<int:column_id>', methods=['GET'], strict_slashes=False)
 def get_todos_from_one_column(column_id):
     todos = db.event.find({'group_id': column_id, 'is_done': False})
+    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
+    tags = [tag for tag in tags_find]  #list of dict
     a = [todo for todo in todos]
+
+    for todo in a:
+        todo_tag_id = todo.get('tag_id')
+        tag_name = 'Не выбрано'
+        for tag in tags:
+            if int(tag.get('tag_id')) == int(todo_tag_id):
+                tag_name = tag.get('tag_name')
+        todo.update({'tag_name': tag_name})
 
     return json.dumps(a, default=str)
 
@@ -87,10 +106,18 @@ def edit_post():
     date_begin = request_data['date_begin']
     date_end = request_data['date_end']
 
+    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
+    tags = [tag for tag in tags_find]  # list of dict
+
     if tag_id == '':
         tag_id = 0
     if place == '':
         place = None
+
+    tag_name = 'Не выбрано'
+    for tag in tags:
+        if int(tag.get('tag_id')) == int(tag_id):
+            tag_name = tag.get('tag_name')
 
     todo = db.event.update_one({'_id': ObjectId(todo_id)}, {'$set': {
         'date_begin': date_begin,
@@ -102,7 +129,7 @@ def edit_post():
         'text': request_data['text']
     }})
 
-    return todo.raw_result
+    return json.dumps({'tag_name': tag_name}, default=str)
 
 
 @main.route('/add_column', methods=['POST'], strict_slashes=False)
@@ -175,10 +202,19 @@ def get_done_todo():
 
 @main.route('/tags',  methods=['GET'], strict_slashes=False)
 def get_tags():
-    tags = db.tags.find()
+    tags = db.tags.find({'tag_id': {'$ne': 0}})
     a = [tag for tag in tags]
     
     return json.dumps(a, default=str)
+
+
+@main.route('/delete_tag', methods=['POST'], strict_slashes=False)
+def delete_tag():
+    request_data = request.get_json()
+    column_id = request_data['_id']
+    column = db.tags.delete_one({'_id': ObjectId(column_id)})
+    db.event.update_many({'tag_id': column_id}, {"$set": {'tag_id': 0}})
+    return column.raw_result
 
 
 @main.route('/add_tag', methods=['POST'], strict_slashes=False)
