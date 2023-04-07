@@ -1,13 +1,6 @@
 
-from db import mongo
-from flask import (
-    Blueprint,
-    jsonify,
-    request,
-    session)
+from flask import Blueprint, jsonify, request, session
 from werkzeug.security import generate_password_hash, check_password_hash
-
-db = mongo.db
 
 auth = Blueprint('auth', __name__)
 
@@ -33,15 +26,15 @@ def signup():
     name = data['login']
     password = data['password']
 
-    user = db.users.find_one({"login": name})
+    # user = db.users.find_one({"login": name})
 
-    if user:
-        return jsonify({'message': 'sign up failed'})
-
-    db.users.insert_one({
-        'login': name,
-        'password': generate_password_hash(password, method='sha256')
-    })
+    # if user:
+    #     return jsonify({'message': 'sign up failed'})
+    #
+    # db.users.insert_one({
+    #     'login': name,
+    #     'password': generate_password_hash(password, method='sha256')
+    # })
 
     return jsonify({'message': [name, password]})
 
@@ -52,13 +45,13 @@ def login():
     name = data['login']
     password = data['password']
 
-    user = db.users.find_one({"login": name})
+    # user = db.users.find_one({"login": name})
 
-    if not user or not check_password_hash(user['password'], password):
-        return jsonify({'message': 'sign in failed'})
-
-    login_val = user['login']
-    session['login'] = login_val
+    # if not user or not check_password_hash(user['password'], password):
+    #     return jsonify({'message': 'sign in failed'})
+    #
+    # login_val = user['login']
+    # session['login'] = login_val
 
     return jsonify({'message': 'sign in success'})
 

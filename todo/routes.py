@@ -1,10 +1,19 @@
-from flask import Blueprint, jsonify, request, session
-from db import mongo
-import json
-from bson.objectid import ObjectId
+from flask import Blueprint, jsonify, request
+from todo.Models.event import Event, Group, Desk, Tag
+from app import db
 
 main = Blueprint('main', __name__)
-db = mongo.db
+
+
+@main.route('/', methods=['GET'])
+def test():
+    from sqlalchemy import create_engine, MetaData
+    engine = create_engine('sqlite:///todos.db')
+    meta = MetaData()
+    meta.reflect(bind=engine)
+    tables = meta.tables.keys()
+    print(tables)
+    return jsonify("Bruh"), 200
 
 
 @main.route('/hello', methods=['POST'])
@@ -13,208 +22,147 @@ def hello():
     name = data['first']
     password = data['second']
 
-    return jsonify({'message': [name, password, 'help']})
+    return jsonify({'message': [name, password, 'help']}), 200
 
 
-@main.route('/todos', methods=['POST'])
+@main.route('/todos', methods=['POST'], strict_slashes=False)
 def add_todo():
     request_data = request.get_json()
-    # if "login" not in session:
-    #     return jsonify({'message': 'user not authorization'})
-    # email = session["login"]
+
     print(request_data)
-    tag_id = request_data['tag_id']
-    place = request_data['place']
-    date_begin = request_data['date_begin']
-    date_end = request_data['date_end']
 
-    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
-    tags = [tag for tag in tags_find]  # list of dict
+    header = request_data.get('header')
+    tag_id = request_data.get('tag_id')
+    group_id = request_data.get('group_id')
+    place = request_data.get('place')
+    date_begin_timestamp = request_data.get('date_begin_timestamp')
+    date_end_timestamp = request_data.get('date_end_timestamp')
+    description = request_data.get('description')
+    is_done = request_data.get('is_done')
 
-    if tag_id == '':
+    if not tag_id:
         tag_id = 0
-    if place == '':
-        place = None
+    if not group_id:
+        group_id = 0
 
-    tag_name = 'Не выбрано'
-    for tag in tags:
-        if int(tag.get('tag_id')) == int(tag_id):
-            tag_name = tag.get('tag_name')
+    new_event = Event(
+        header=header,
+        place=place,
+        tag_id=tag_id,
+        group_id=group_id,
+        date_begin_timestamp=date_begin_timestamp,
+        date_end_timestamp=date_end_timestamp,
+        description=description,
+        is_done=is_done
+    )
 
-    todo = db.event.insert_one({
-        'date_begin': date_begin,
-        'date_end': date_end,
-        'group_id': int(request_data['group_id']),
-        'header': request_data['header'],
-        'place': place,
-        'tag_id': tag_id,
-        'text': request_data['text'],
-        'is_done': False
-    })
+    db.session.add(new_event)
+    db.session.commit()
 
-    return json.dumps({'todo_id': todo.inserted_id, 'tag_name': tag_name} , default=str)
+    return jsonify("Makarena"), 200
 
 
 @main.route('/todos', methods=['GET'], strict_slashes=False)
 def get_todos():
-    todos = db.event.find()
-    a = [todo for todo in todos]
-
-    return json.dumps(a, default=str)
+    todos = [todo.serialize() for todo in Event.query.all()]
+    return jsonify(todos), 200
 
 
 @main.route('/columns', methods=['GET'], strict_slashes=False)
 def get_columns():
-    columns = db.group.find()
-    a = [todo for todo in columns]
-
-    return json.dumps(a, default=str)
+    columns = [column.serialize() for column in Group.query.all()]
+    return jsonify(columns), 200
 
 
 @main.route('/todos/<int:column_id>', methods=['GET'], strict_slashes=False)
 def get_todos_from_one_column(column_id):
-    todos = db.event.find({'group_id': column_id, 'is_done': False})
-    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
-    tags = [tag for tag in tags_find]  #list of dict
-    a = [todo for todo in todos]
-
-    for todo in a:
-        todo_tag_id = todo.get('tag_id')
-        tag_name = 'Не выбрано'
-        for tag in tags:
-            if int(tag.get('tag_id')) == int(todo_tag_id):
-                tag_name = tag.get('tag_name')
-        todo.update({'tag_name': tag_name})
-
-    return json.dumps(a, default=str)
+    todos = Event.query.filter_by(group_id=column_id, is_done=False).all()
+    todos = [todo.serialize() for todo in todos]
+    return jsonify(todos), 200
 
 
-@main.route('/delete_todo', methods=['POST'], strict_slashes=False)
+@main.route('/delete_todo', methods=['DELETE'], strict_slashes=False)
 def delete_todo():
     request_data = request.get_json()
-    todo_id = request_data['_id']
-    todo = db.event.delete_one({'_id': ObjectId(todo_id)})
-    return todo.raw_result
+    todo_id = request_data.get('id')
+    todo_to_delete = Event.query.filter_by(id=todo_id).first()
+    if todo_to_delete:
+        db.session.delete(todo_to_delete)
+        db.session.commit()
+    return "Totototototo", 200
 
 
-@main.route('/edit_todo', methods=['POST'], strict_slashes=False)
-def edit_post():
+@main.route('/edit_todo', methods=['PUT'], strict_slashes=False)
+def edit_todo():
     request_data = request.get_json()
-    todo_id = request_data['_id']
-    tag_id = request_data['tag_id']
-    place = request_data['place']
-    date_begin = request_data['date_begin']
-    date_end = request_data['date_end']
 
-    tags_find = db.tags.find({'tag_id': {'$ne': 0}})
-    tags = [tag for tag in tags_find]  # list of dict
+    todo_id = request_data.get('id')
 
-    if tag_id == '':
-        tag_id = 0
-    if place == '':
-        place = None
+    todo_to_edit = Event.query.filter_by(id=todo_id).first()
+    if not todo_to_edit:
+        return "Ne exist", 200
 
-    tag_name = 'Не выбрано'
-    for tag in tags:
-        if int(tag.get('tag_id')) == int(tag_id):
-            tag_name = tag.get('tag_name')
+    edit_dict = dict()
+    edit_dict['header'] = request_data.get('header')
+    edit_dict['tag_id'] = request_data.get('tag_id')
+    edit_dict['group_id'] = request_data.get('group_id')
+    edit_dict['place'] = request_data.get('place')
+    edit_dict['date_begin_timestamp'] = request_data.get('date_begin_timestamp')
+    edit_dict['date_end_timestamp'] = request_data.get('date_end_timestamp')
+    edit_dict['description'] = request_data.get('description')
+    edit_dict['is_done'] = request_data.get('is_done')
 
-    todo = db.event.update_one({'_id': ObjectId(todo_id)}, {'$set': {
-        'date_begin': date_begin,
-        'date_end': date_end,
-        'group_id': int(request_data['group_id']),
-        'header': request_data['header'],
-        'place': place,
-        'tag_id': tag_id,
-        'text': request_data['text']
-    }})
+    for key, value in edit_dict.items():
+        if value:
+            setattr(todo_to_edit, key, value)
+    db.session.commit()
 
-    return json.dumps({'tag_name': tag_name}, default=str)
+    return "I am just a fish", 200
 
 
 @main.route('/add_column', methods=['POST'], strict_slashes=False)
 def add_column():
     request_data = request.get_json()
-    group_name = request_data['group_name']
-    desk_id = request_data['desk_id']
 
-    columns = db.group.find()
-    a = [column for column in columns]
-    if a != []:
-        group_id = a[-1]['group_id'] + 1
-    else:
-        group_id = 0
+    name = request_data.get('name')
+    desk_id = request_data.get('desk_id')
 
-    column = db.group.insert_one({
-        'group_id': group_id,
-        'group_name': group_name,
-        'desk_id': desk_id
-    })
+    new_column = Group(
+        name=name,
+        desk_id=desk_id
+    )
 
-    return json.dumps([column.inserted_id, group_id], default=str)
+    db.session.add(new_column)
+    db.session.commit()
 
-
-@main.route('/edit_column', methods=['POST'], strict_slashes=False)
-def edit_column_name():
-    request_data = request.get_json()
-    group_name = request_data['group_name']
-    group__id = request_data['_id']
-    group_id = request_data['group_id']
-    desk_id = request_data['desk_id']
-
-    column = db.group.update_one({'_id': ObjectId(group__id)}, {'$set': {
-        'group_name': group_name,
-        'group_id': group_id,
-        'desk_id': desk_id
-    }})
-
-    return column.raw_result
-
-
-@main.route('/delete_column', methods=['POST'], strict_slashes=False)
-def delete_column():
-    request_data = request.get_json()
-    column_id = request_data['_id']
-    column = db.group.delete_one({'_id': ObjectId(column_id)})
-    db.event.delete_many({'group_id': request_data['group_id']})
-    return column.raw_result
-
-
-@main.route('/done_todo', methods=['POST'], strict_slashes=False)
-def done_todo():
-    request_data = request.get_json()
-    print(request_data)
-    todo_id = request_data['_id']
-    todo = db.event.update_one({'_id': ObjectId(todo_id)}, {'$set': {
-        'is_done': True
-    }})
-
-    return todo.raw_result
-
-
-@main.route('/done_todo', methods=['GET'], strict_slashes=False)
-def get_done_todo():
-    todos = db.event.find({'is_done': True})
-    a = [todo for todo in todos]
-
-    return json.dumps(a, default=str)
+    return "Column-group", 200
 
 
 @main.route('/tags',  methods=['GET'], strict_slashes=False)
 def get_tags():
-    tags = db.tags.find({'tag_id': {'$ne': 0}})
-    a = [tag for tag in tags]
-    
-    return json.dumps(a, default=str)
+    tags = [tag.serialize() for tag in Tag.query.all()]
+    return jsonify(tags), 200
 
 
-@main.route('/delete_tag', methods=['POST'], strict_slashes=False)
+@main.route('/delete_tag', methods=['DELETE'], strict_slashes=False)
 def delete_tag():
     request_data = request.get_json()
-    column_id = request_data['_id']
-    column = db.tags.delete_one({'_id': ObjectId(column_id)})
-    db.event.update_many({'tag_id': column_id}, {"$set": {'tag_id': 0}})
-    return column.raw_result
+    tag_id = request_data.get('id')
+
+    if tag_id == '0':
+        return "Zero", 200
+
+    tag_to_delete = Tag.query.filter_by(id=tag_id).first()
+
+    if not tag_to_delete:
+        return "Unexpected @all", 200
+
+    events = Event.query.filter_by(tag_id=tag_id).all()
+    for event in events:
+        event.tag_id = 0
+    db.session.delete(tag_to_delete)
+    db.session.commit()
+    return "Al al al", 200
 
 
 @main.route('/add_tag', methods=['POST'], strict_slashes=False)
@@ -222,16 +170,15 @@ def add_tag():
     request_data = request.get_json()
     print(request_data)
 
-    tags = db.tags.find()
-    a = [tag for tag in tags]
-    if a != []:
-        tag_id = a[-1]['tag_id'] + 1
-    else:
-        tag_id = 1
+    name = request_data.get('name')
+    # Current user
+    user_id = 0
 
-    tag = db.tags.insert_one({
-        'tag_id': tag_id,
-        'tag_name': request_data['tag_name']
-    })
+    new_tag = Tag(
+        name=name,
+        user_id=user_id
+    )
 
-    return json.dumps([tag.inserted_id, tag_id], default=str)
+    db.session.add(new_tag)
+    db.session.commit()
+    return "@all", 200
