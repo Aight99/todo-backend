@@ -68,12 +68,6 @@ def get_todos():
     return jsonify(todos), 200
 
 
-@main.route('/columns', methods=['GET'], strict_slashes=False)
-def get_columns():
-    columns = [column.serialize() for column in Group.query.all()]
-    return jsonify(columns), 200
-
-
 @main.route('/todos/<int:column_id>', methods=['GET'], strict_slashes=False)
 def get_todos_from_one_column(column_id):
     todos = Event.query.filter_by(group_id=column_id, is_done=False).all()
@@ -81,7 +75,7 @@ def get_todos_from_one_column(column_id):
     return jsonify(todos), 200
 
 
-@main.route('/delete_todo', methods=['DELETE'], strict_slashes=False)
+@main.route('/todos', methods=['DELETE'], strict_slashes=False)
 def delete_todo():
     request_data = request.get_json()
     todo_id = request_data.get('id')
@@ -92,7 +86,7 @@ def delete_todo():
     return "Totototototo", 200
 
 
-@main.route('/edit_todo', methods=['PUT'], strict_slashes=False)
+@main.route('/todos', methods=['PUT'], strict_slashes=False)
 def edit_todo():
     request_data = request.get_json()
 
@@ -120,7 +114,13 @@ def edit_todo():
     return "I am just a fish", 200
 
 
-@main.route('/add_column', methods=['POST'], strict_slashes=False)
+@main.route('/columns', methods=['GET'], strict_slashes=False)
+def get_columns():
+    columns = [column.serialize() for column in Group.query.all()]
+    return jsonify(columns), 200
+
+
+@main.route('/columns', methods=['POST'], strict_slashes=False)
 def add_column():
     request_data = request.get_json()
 
@@ -138,13 +138,46 @@ def add_column():
     return "Column-group", 200
 
 
+@main.route('/columns', methods=['DELETE'], strict_slashes=False)
+def delete_column():
+    request_data = request.get_json()
+    column_id = request_data.get('id')
+    column_to_delete = Group.query.filter_by(id=column_id).first()
+    if column_to_delete:
+        db.session.delete(column_to_delete)
+        db.session.commit()
+    return "Totototototo", 200
+
+
+@main.route('/columns', methods=['PUT'], strict_slashes=False)
+def edit_column():
+    request_data = request.get_json()
+
+    column_id = request_data.get('id')
+
+    column_to_edit = Event.query.filter_by(id=column_id).first()
+    if not column_to_edit:
+        return "Ne exist", 200
+
+    edit_dict = dict()
+    edit_dict['name'] = request_data.get('name')
+    edit_dict['desk_id'] = request_data.get('desk_id')
+
+    for key, value in edit_dict.items():
+        if value:
+            setattr(column_to_edit, key, value)
+    db.session.commit()
+
+    return "I am just a fish", 200
+
+
 @main.route('/tags',  methods=['GET'], strict_slashes=False)
 def get_tags():
     tags = [tag.serialize() for tag in Tag.query.all()]
     return jsonify(tags), 200
 
 
-@main.route('/delete_tag', methods=['DELETE'], strict_slashes=False)
+@main.route('/tags', methods=['DELETE'], strict_slashes=False)
 def delete_tag():
     request_data = request.get_json()
     tag_id = request_data.get('id')
@@ -165,7 +198,7 @@ def delete_tag():
     return "Al al al", 200
 
 
-@main.route('/add_tag', methods=['POST'], strict_slashes=False)
+@main.route('/tags', methods=['POST'], strict_slashes=False)
 def add_tag():
     request_data = request.get_json()
     print(request_data)
@@ -182,3 +215,79 @@ def add_tag():
     db.session.add(new_tag)
     db.session.commit()
     return "@all", 200
+
+
+@main.route('/tags', methods=['PUT'], strict_slashes=False)
+def edit_tag():
+    request_data = request.get_json()
+    tag_id = request_data.get('id')
+
+    tag_to_edit = Tag.query.filter_by(id=tag_id).first()
+    if not tag_to_edit:
+        return "Ne exist", 200
+
+    new_name = request_data.get('name')
+    if new_name:
+        tag_to_edit.name = new_name
+
+    db.session.commit()
+
+    return "I am just a fish", 200
+
+
+@main.route('/desks',  methods=['GET'], strict_slashes=False)
+def get_desks():
+    desks = [desk.serialize() for desk in Desk.query.all()]
+    return jsonify(desks), 200
+
+
+@main.route('/desks', methods=['DELETE'], strict_slashes=False)
+def delete_desk():
+    request_data = request.get_json()
+    desk_id = request_data.get('id')
+
+    desk_to_delete = Desk.query.filter_by(id=desk_id).first()
+    if not desk_to_delete:
+        return "Unexpected @all", 200
+
+    db.session.delete(desk_to_delete)
+    db.session.commit()
+    return "Al al al", 200
+
+
+@main.route('/desks', methods=['POST'], strict_slashes=False)
+def add_desk():
+    request_data = request.get_json()
+    print(request_data)
+
+    name = request_data.get('name')
+    # Current user
+    user_id = 0
+
+    new_desk = Desk(
+        name=name,
+        user_id=user_id
+    )
+
+    db.session.add(new_desk)
+    db.session.commit()
+    return "@all", 200
+
+
+@main.route('/desks', methods=['PUT'], strict_slashes=False)
+def edit_desk():
+    request_data = request.get_json()
+    desk_id = request_data.get('id')
+
+    desk_to_edit = Desk.query.filter_by(id=desk_id).first()
+    if not desk_to_edit:
+        return "Ne exist", 200
+
+    new_name = request_data.get('name')
+    if new_name:
+        desk_to_edit.name = new_name
+
+    db.session.commit()
+
+    return "I am just a fish", 200
+
