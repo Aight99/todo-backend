@@ -1,64 +1,59 @@
-
 from flask import Blueprint, jsonify, request, session
+from flask_login import login_user, logout_user, login_required
+from todo.Models.auth import User
+from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 auth = Blueprint('auth', __name__)
 
 
-# @auth.route('/login')
-# def login():
-#     return render_template('login.html')
-#
-#
-# @auth.route('/signup')
-# def signup():
-#     return render_template('signup.html')
-#
-
-# @auth.route('/hello', methods=['POST'])
-# def hello():
-#     return jsonify({'message': 'hello'})
-
-
 @auth.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-    name = data['login']
-    password = data['password']
+    username = data.get('login')
+    name = data.get('name')
+    password = data.get('password')
+    password_rep = data.get('password_rep')
 
-    # user = db.users.find_one({"login": name})
+    if password_rep != password:
+        return "password does not match password repeat", 200
 
-    # if user:
-    #     return jsonify({'message': 'sign up failed'})
-    #
-    # db.users.insert_one({
-    #     'login': name,
-    #     'password': generate_password_hash(password, method='sha256')
-    # })
+    user = User.query.filter_by(login=username).first()
 
-    return jsonify({'message': [name, password]})
+    if user:
+        return "user already exist", 200
+
+    new_user = User(
+        login=username,
+        name=name,
+        password=generate_password_hash(password)
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+    login_user(new_user)
+
+    return f"{username} signuped", 200
 
 
 @auth.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    name = data['login']
-    password = data['password']
+    username = data.get('login')
+    password = data.get('password')
 
-    # user = db.users.find_one({"login": name})
+    user = User.query.filter_by(login=username).first()
 
-    # if not user or not check_password_hash(user['password'], password):
-    #     return jsonify({'message': 'sign in failed'})
-    #
-    # login_val = user['login']
-    # session['login'] = login_val
+    if not user or not check_password_hash(user.password, password):
+        return "sign in failed", 200
 
-    return jsonify({'message': 'sign in success'})
+    login_user(user)
+
+    return "sign in succeed", 200
 
 
-@auth.route('/logout')
+@auth.route('/logout', methods=['POST'])
+@login_required
 def logout():
-    if "login" in session:
-        session.pop('email', None)
-
-    return jsonify({'message': 'log out'})
+    logout_user()
+    return "logouted", 200
