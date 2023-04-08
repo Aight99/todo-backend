@@ -1,4 +1,4 @@
-from todo import create_app, db
+from todo import create_app, db, jwt
 
 if __name__ == "__main__":
     app = create_app()

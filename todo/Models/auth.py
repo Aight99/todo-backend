@@ -14,20 +14,5 @@ class User(db.Model):
             'name': self.name,
         }
 
-    @property
-    def is_active(self):
-        return True
-
-    @property
-    def is_authenticated(self):
-        return self.is_active
-
-    @property
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return self.id
-
     def __str__(self):
         return f'{self.id}:{self.login}'

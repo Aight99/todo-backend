@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from todo.Models.event import Event, Group, Desk, Tag
-from flask_login import login_required, current_user
-from app import db
+from todo.Models.auth import User
+from app import db, jwt
 
 main = Blueprint('main', __name__)
 
@@ -18,14 +19,15 @@ def test():
 
 
 @main.route('/hello', methods=['POST', 'GET'])
-@login_required
+@jwt_required()
 def hello():
-    name = current_user.name
-    return f"Hello, {name}!", 200
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(id=user_id).first()
+    return f"Hello, {user.name}!", 200
 
 
 @main.route('/todos', methods=['POST'], strict_slashes=False)
-@login_required
+@jwt_required()
 def add_todo():
     request_data = request.get_json()
 
@@ -63,14 +65,14 @@ def add_todo():
 
 
 @main.route('/todos', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def get_todos():
     todos = [todo.serialize() for todo in Event.query.all()]
     return jsonify(todos), 200
 
 
 @main.route('/todos/<int:column_id>', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def get_todos_from_one_column(column_id):
     todos = Event.query.filter_by(group_id=column_id, is_done=False).all()
     todos = [todo.serialize() for todo in todos]
@@ -78,7 +80,7 @@ def get_todos_from_one_column(column_id):
 
 
 @main.route('/todos', methods=['DELETE'], strict_slashes=False)
-@login_required
+@jwt_required()
 def delete_todo():
     request_data = request.get_json()
     todo_id = request_data.get('id')
@@ -90,7 +92,7 @@ def delete_todo():
 
 
 @main.route('/todos', methods=['PUT'], strict_slashes=False)
-@login_required
+@jwt_required()
 def edit_todo():
     request_data = request.get_json()
 
@@ -119,14 +121,14 @@ def edit_todo():
 
 
 @main.route('/columns', methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def get_columns():
     columns = [column.serialize() for column in Group.query.all()]
     return jsonify(columns), 200
 
 
 @main.route('/columns', methods=['POST'], strict_slashes=False)
-@login_required
+@jwt_required()
 def add_column():
     request_data = request.get_json()
 
@@ -145,7 +147,7 @@ def add_column():
 
 
 @main.route('/columns', methods=['DELETE'], strict_slashes=False)
-@login_required
+@jwt_required()
 def delete_column():
     request_data = request.get_json()
     column_id = request_data.get('id')
@@ -157,7 +159,7 @@ def delete_column():
 
 
 @main.route('/columns', methods=['PUT'], strict_slashes=False)
-@login_required
+@jwt_required()
 def edit_column():
     request_data = request.get_json()
 
@@ -180,14 +182,14 @@ def edit_column():
 
 
 @main.route('/tags',  methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def get_tags():
     tags = [tag.serialize() for tag in Tag.query.all()]
     return jsonify(tags), 200
 
 
 @main.route('/tags', methods=['DELETE'], strict_slashes=False)
-@login_required
+@jwt_required()
 def delete_tag():
     request_data = request.get_json()
     tag_id = request_data.get('id')
@@ -209,14 +211,13 @@ def delete_tag():
 
 
 @main.route('/tags', methods=['POST'], strict_slashes=False)
-@login_required
+@jwt_required()
 def add_tag():
     request_data = request.get_json()
     print(request_data)
 
     name = request_data.get('name')
-    # Current user
-    user_id = 0
+    user_id = get_jwt_identity()
 
     new_tag = Tag(
         name=name,
@@ -229,7 +230,7 @@ def add_tag():
 
 
 @main.route('/tags', methods=['PUT'], strict_slashes=False)
-@login_required
+@jwt_required()
 def edit_tag():
     request_data = request.get_json()
     tag_id = request_data.get('id')
@@ -248,14 +249,14 @@ def edit_tag():
 
 
 @main.route('/desks',  methods=['GET'], strict_slashes=False)
-@login_required
+@jwt_required()
 def get_desks():
     desks = [desk.serialize() for desk in Desk.query.all()]
     return jsonify(desks), 200
 
 
 @main.route('/desks', methods=['DELETE'], strict_slashes=False)
-@login_required
+@jwt_required()
 def delete_desk():
     request_data = request.get_json()
     desk_id = request_data.get('id')
@@ -270,14 +271,13 @@ def delete_desk():
 
 
 @main.route('/desks', methods=['POST'], strict_slashes=False)
-@login_required
+@jwt_required()
 def add_desk():
     request_data = request.get_json()
     print(request_data)
 
     name = request_data.get('name')
-    # Current user
-    user_id = 0
+    user_id = get_jwt_identity()
 
     new_desk = Desk(
         name=name,
@@ -290,7 +290,7 @@ def add_desk():
 
 
 @main.route('/desks', methods=['PUT'], strict_slashes=False)
-@login_required
+@jwt_required()
 def edit_desk():
     request_data = request.get_json()
     desk_id = request_data.get('id')

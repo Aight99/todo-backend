@@ -1,17 +1,17 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_jwt_extended import JWTManager
 
 db = SQLAlchemy()
-login_manager = LoginManager()
+jwt = None
 
 
 def create_app():
     app = Flask(__name__)
     app.config.from_pyfile("config.py")
     db.init_app(app)
-    # CORS(app)
+    CORS(app, resources={r"/": {"origins": "http://localhost:3000"}})
 
     from todo.Models.event import Event, Tag, Desk, Group
     from todo.Models.auth import User
@@ -22,10 +22,7 @@ def create_app():
     from .routes import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
-    login_manager.init_app(app)
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.filter_by(id=user_id).first()
+    global jwt
+    jwt = JWTManager(app)
 
     return app

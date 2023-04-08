@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify, request, session
-from flask_login import login_user, logout_user, login_required
+from datetime import timedelta
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import create_access_token
 from todo.Models.auth import User
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,12 +29,11 @@ def signup():
         name=name,
         password=generate_password_hash(password)
     )
-
     db.session.add(new_user)
     db.session.commit()
-    login_user(new_user)
 
-    return f"{username} signuped", 200
+    access_token = create_access_token(identity=new_user.id, expires_delta=timedelta(days=7))
+    return jsonify({"access_token": access_token}), 200
 
 
 @auth.route('/login', methods=['POST'])
@@ -47,13 +47,5 @@ def login():
     if not user or not check_password_hash(user.password, password):
         return "sign in failed", 200
 
-    login_user(user)
-
-    return "sign in succeed", 200
-
-
-@auth.route('/logout', methods=['POST'])
-@login_required
-def logout():
-    logout_user()
-    return "logouted", 200
+    access_token = create_access_token(identity=user.id, expires_delta=timedelta(days=7))
+    return jsonify({"access_token": access_token}), 200
