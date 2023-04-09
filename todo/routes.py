@@ -68,8 +68,8 @@ def add_todo():
 @jwt_required()
 def get_todos():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first()
-    group_id = Group.query.filter_by(desk_id=desk_id).first()
+    desk_id = Desk.query.filter_by(user_id=user_id).first().id
+    group_id = Group.query.filter_by(desk_id=desk_id).first().id
     todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id).all()]
     return jsonify(todos), 200
 
@@ -143,8 +143,8 @@ def done_todo():
 @jwt_required()
 def get_done_todo():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first()
-    group_id = Group.query.filter_by(desk_id=desk_id).first()
+    desk_id = Desk.query.filter_by(user_id=user_id).first().id
+    group_id = Group.query.filter_by(desk_id=desk_id).first().id
     todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id, is_done=True).all()]
     return jsonify(todos), 200
 
@@ -153,7 +153,7 @@ def get_done_todo():
 @jwt_required()
 def get_columns():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first()
+    desk_id = Desk.query.filter_by(user_id=user_id).first().id
     columns = [column.serialize() for column in Group.query.filter_by(desk_id=desk_id).all()]
     return jsonify(columns), 200
 
