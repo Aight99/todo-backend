@@ -88,9 +88,10 @@ def delete_todo():
     request_data = request.get_json()
     todo_id = request_data.get('id')
     todo_to_delete = Event.query.filter_by(id=todo_id).first()
-    if todo_to_delete:
-        db.session.delete(todo_to_delete)
-        db.session.commit()
+    if not todo_to_delete:
+        return "Ne exist", 404
+    db.session.delete(todo_to_delete)
+    db.session.commit()
     return "Deleted", 200
 
 
@@ -102,7 +103,7 @@ def edit_todo():
 
     todo_to_edit = Event.query.filter_by(id=todo_id).first()
     if not todo_to_edit:
-        return "Ne exist", 200
+        return "Ne exist", 404
 
     edit_dict = dict()
     edit_dict['header'] = request_data.get('header')
@@ -130,7 +131,7 @@ def done_todo():
 
     todo_to_edit = Event.query.filter_by(id=todo_id).first()
     if not todo_to_edit:
-        return "Ne exist", 200
+        return "Ne exist", 404
 
     todo_to_edit.is_done = True
     db.session.commit()
@@ -181,9 +182,10 @@ def delete_column():
     request_data = request.get_json()
     column_id = request_data.get('id')
     column_to_delete = Group.query.filter_by(id=column_id).first()
-    if column_to_delete:
-        db.session.delete(column_to_delete)
-        db.session.commit()
+    if not column_to_delete:
+        return "Ne exist", 404
+    db.session.delete(column_to_delete)
+    db.session.commit()
     return "Deleted", 200
 
 
@@ -195,7 +197,7 @@ def edit_column():
 
     column_to_edit = Event.query.filter_by(id=column_id).first()
     if not column_to_edit:
-        return "Ne exist", 200
+        return "Ne exist", 404
 
     edit_dict = dict()
     edit_dict['name'] = request_data.get('name')
@@ -224,12 +226,12 @@ def delete_tag():
     tag_id = request_data.get('id')
 
     if tag_id == '0':
-        return "Zero", 200
+        return "Zero", 400
 
     tag_to_delete = Tag.query.filter_by(id=tag_id).first()
 
     if not tag_to_delete:
-        return "Unexpected @all", 200
+        return "Unexpected @all", 404
 
     events = Event.query.filter_by(tag_id=tag_id).all()
     for event in events:
@@ -266,7 +268,7 @@ def edit_tag():
 
     tag_to_edit = Tag.query.filter_by(id=tag_id).first()
     if not tag_to_edit:
-        return "Ne exist", 200
+        return "Ne exist", 404
 
     new_name = request_data.get('name')
     if new_name:
@@ -293,7 +295,7 @@ def delete_desk():
 
     desk_to_delete = Desk.query.filter_by(id=desk_id).first()
     if not desk_to_delete:
-        return "Unexpected @all", 200
+        return "Unexpected @all", 404
 
     db.session.delete(desk_to_delete)
     db.session.commit()
@@ -327,7 +329,7 @@ def edit_desk():
 
     desk_to_edit = Desk.query.filter_by(id=desk_id).first()
     if not desk_to_edit:
-        return "Ne exist", 200
+        return "Ne exist", 404
 
     new_name = request_data.get('name')
     if new_name:
