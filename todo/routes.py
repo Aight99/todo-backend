@@ -61,13 +61,16 @@ def add_todo():
     db.session.add(new_event)
     db.session.commit()
 
-    return jsonify("Makarena"), 200
+    return new_event.serialize(), 200
 
 
 @main.route('/todos', methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_todos():
-    todos = [todo.serialize() for todo in Event.query.all()]
+    user_id = get_jwt_identity()
+    desk_id = Desk.query.filter_by(user_id=user_id).first()
+    group_id = Group.query.filter_by(desk_id=desk_id).first()
+    todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id).all()]
     return jsonify(todos), 200
 
 
@@ -88,14 +91,13 @@ def delete_todo():
     if todo_to_delete:
         db.session.delete(todo_to_delete)
         db.session.commit()
-    return "Totototototo", 200
+    return "Deleted", 200
 
 
 @main.route('/todos', methods=['PUT'], strict_slashes=False)
 @jwt_required()
 def edit_todo():
     request_data = request.get_json()
-
     todo_id = request_data.get('id')
 
     todo_to_edit = Event.query.filter_by(id=todo_id).first()
@@ -117,13 +119,41 @@ def edit_todo():
             setattr(todo_to_edit, key, value)
     db.session.commit()
 
-    return "I am just a fish", 200
+    return todo_to_edit.serialize(), 200
+
+
+@main.route('/done_todo', methods=['POST'], strict_slashes=False)
+@jwt_required()
+def done_todo():
+    request_data = request.get_json()
+    todo_id = request_data.get('id')
+
+    todo_to_edit = Event.query.filter_by(id=todo_id).first()
+    if not todo_to_edit:
+        return "Ne exist", 200
+
+    todo_to_edit.is_done = True
+    db.session.commit()
+
+    return todo_to_edit.serialize(), 200
+
+
+@main.route('/done_todo', methods=['GET'], strict_slashes=False)
+@jwt_required()
+def get_done_todo():
+    user_id = get_jwt_identity()
+    desk_id = Desk.query.filter_by(user_id=user_id).first()
+    group_id = Group.query.filter_by(desk_id=desk_id).first()
+    todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id, is_done=True).all()]
+    return jsonify(todos), 200
 
 
 @main.route('/columns', methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_columns():
-    columns = [column.serialize() for column in Group.query.all()]
+    user_id = get_jwt_identity()
+    desk_id = Desk.query.filter_by(user_id=user_id).first()
+    columns = [column.serialize() for column in Group.query.filter_by(desk_id=desk_id).all()]
     return jsonify(columns), 200
 
 
@@ -131,7 +161,6 @@ def get_columns():
 @jwt_required()
 def add_column():
     request_data = request.get_json()
-
     name = request_data.get('name')
     desk_id = request_data.get('desk_id')
 
@@ -143,7 +172,7 @@ def add_column():
     db.session.add(new_column)
     db.session.commit()
 
-    return "Column-group", 200
+    return new_column.serialize(), 200
 
 
 @main.route('/columns', methods=['DELETE'], strict_slashes=False)
@@ -155,14 +184,13 @@ def delete_column():
     if column_to_delete:
         db.session.delete(column_to_delete)
         db.session.commit()
-    return "Totototototo", 200
+    return "Deleted", 200
 
 
 @main.route('/columns', methods=['PUT'], strict_slashes=False)
 @jwt_required()
 def edit_column():
     request_data = request.get_json()
-
     column_id = request_data.get('id')
 
     column_to_edit = Event.query.filter_by(id=column_id).first()
@@ -178,13 +206,14 @@ def edit_column():
             setattr(column_to_edit, key, value)
     db.session.commit()
 
-    return "I am just a fish", 200
+    return column_to_edit.serialize(), 200
 
 
 @main.route('/tags',  methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_tags():
-    tags = [tag.serialize() for tag in Tag.query.all()]
+    user_id = get_jwt_identity()
+    tags = [tag.serialize() for tag in Tag.query.filter_by(user_id=user_id).all()]
     return jsonify(tags), 200
 
 
@@ -207,7 +236,7 @@ def delete_tag():
         event.tag_id = 0
     db.session.delete(tag_to_delete)
     db.session.commit()
-    return "Al al al", 200
+    return "Deleted", 200
 
 
 @main.route('/tags', methods=['POST'], strict_slashes=False)
@@ -226,7 +255,7 @@ def add_tag():
 
     db.session.add(new_tag)
     db.session.commit()
-    return "@all", 200
+    return new_tag.serialize(), 200
 
 
 @main.route('/tags', methods=['PUT'], strict_slashes=False)
@@ -245,13 +274,14 @@ def edit_tag():
 
     db.session.commit()
 
-    return "I am just a fish", 200
+    return tag_to_edit.serialize(), 200
 
 
 @main.route('/desks',  methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_desks():
-    desks = [desk.serialize() for desk in Desk.query.all()]
+    user_id = get_jwt_identity()
+    desks = [desk.serialize() for desk in Desk.query.filter_by(user_id=user_id).all()]
     return jsonify(desks), 200
 
 
@@ -267,7 +297,7 @@ def delete_desk():
 
     db.session.delete(desk_to_delete)
     db.session.commit()
-    return "Al al al", 200
+    return "Deleted", 200
 
 
 @main.route('/desks', methods=['POST'], strict_slashes=False)
@@ -286,7 +316,7 @@ def add_desk():
 
     db.session.add(new_desk)
     db.session.commit()
-    return "@all", 200
+    return new_desk.serialize(), 200
 
 
 @main.route('/desks', methods=['PUT'], strict_slashes=False)
@@ -305,5 +335,5 @@ def edit_desk():
 
     db.session.commit()
 
-    return "I am just a fish", 200
+    return desk_to_edit.serialize(), 200
 
