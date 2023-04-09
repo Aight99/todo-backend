@@ -31,8 +31,6 @@ def hello():
 def add_todo():
     request_data = request.get_json()
 
-    print(request_data)
-
     header = request_data.get('header')
     tag_id = request_data.get('tag_id')
     group_id = request_data.get('group_id')
@@ -44,8 +42,6 @@ def add_todo():
 
     if not tag_id:
         tag_id = 0
-    if not group_id:
-        group_id = 0
 
     new_event = Event(
         header=header,
@@ -68,9 +64,15 @@ def add_todo():
 @jwt_required()
 def get_todos():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first().id
-    group_id = Group.query.filter_by(desk_id=desk_id).first().id
-    todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id).all()]
+
+    events = db.session.query(User, Desk, Group, Event) \
+        .join(Desk, User.id == Desk.user_id) \
+        .join(Group, Desk.id == Group.desk_id) \
+        .join(Event, Group.id == Event.group_id) \
+        .filter(User.id == user_id) \
+        .all()
+
+    todos = [todo[3].serialize() for todo in events]
     return jsonify(todos), 200
 
 
@@ -143,9 +145,15 @@ def done_todo():
 @jwt_required()
 def get_done_todo():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first().id
-    group_id = Group.query.filter_by(desk_id=desk_id).first().id
-    todos = [todo.serialize() for todo in Event.query.filter_by(group_id=group_id, is_done=True).all()]
+
+    events = db.session.query(User, Desk, Group, Event) \
+        .join(Desk, User.id == Desk.user_id) \
+        .join(Group, Desk.id == Group.desk_id) \
+        .join(Event, Group.id == Event.group_id) \
+        .filter(User.id == user_id, Event.is_done) \
+        .all()
+
+    todos = [todo[3].serialize() for todo in events]
     return jsonify(todos), 200
 
 
@@ -153,8 +161,14 @@ def get_done_todo():
 @jwt_required()
 def get_columns():
     user_id = get_jwt_identity()
-    desk_id = Desk.query.filter_by(user_id=user_id).first().id
-    columns = [column.serialize() for column in Group.query.filter_by(desk_id=desk_id).all()]
+
+    columns = db.session.query(User, Desk, Group) \
+        .join(Desk, User.id == Desk.user_id) \
+        .join(Group, Desk.id == Group.desk_id) \
+        .filter(User.id == user_id) \
+        .all()
+
+    columns = [column[2].serialize() for column in columns]
     return jsonify(columns), 200
 
 
@@ -211,11 +225,13 @@ def edit_column():
     return column_to_edit.serialize(), 200
 
 
-@main.route('/tags',  methods=['GET'], strict_slashes=False)
+@main.route('/tags', methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_tags():
     user_id = get_jwt_identity()
     tags = [tag.serialize() for tag in Tag.query.filter_by(user_id=user_id).all()]
+    if not user_id == 0:
+        tags.append(Tag.query.filter_by(id=0).first().serialize())
     return jsonify(tags), 200
 
 
@@ -279,7 +295,7 @@ def edit_tag():
     return tag_to_edit.serialize(), 200
 
 
-@main.route('/desks',  methods=['GET'], strict_slashes=False)
+@main.route('/desks', methods=['GET'], strict_slashes=False)
 @jwt_required()
 def get_desks():
     user_id = get_jwt_identity()
@@ -338,4 +354,3 @@ def edit_desk():
     db.session.commit()
 
     return desk_to_edit.serialize(), 200
-

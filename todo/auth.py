@@ -1,7 +1,7 @@
 from datetime import timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token
-from todo.Models.event import Desk
+from todo.Models.event import Desk, Group
 from todo.Models.auth import User
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -37,6 +37,12 @@ def signup():
         user_id=new_user.id
     )
     db.session.add(new_desk)
+    db.session.commit()
+    new_group = Group(
+        name="чевапчич",
+        desk_id=new_desk.id
+    )
+    db.session.add(new_group)
     db.session.commit()
 
     access_token = create_access_token(identity=new_user.id, expires_delta=timedelta(days=7))
