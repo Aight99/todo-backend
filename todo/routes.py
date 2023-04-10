@@ -32,16 +32,13 @@ def add_todo():
     request_data = request.get_json()
 
     header = request_data.get('header')
-    tag_id = request_data.get('tag_id')
+    tag_id = request_data.get('tag_id', 0)
     group_id = request_data.get('group_id')
     place = request_data.get('place')
     date_begin_timestamp = request_data.get('date_begin_timestamp')
     date_end_timestamp = request_data.get('date_end_timestamp')
     description = request_data.get('description')
-    is_done = request_data.get('is_done')
-
-    if not tag_id:
-        tag_id = 0
+    is_done = request_data.get('is_done', False)
 
     new_event = Event(
         header=header,
