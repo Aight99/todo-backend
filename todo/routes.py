@@ -26,6 +26,14 @@ def hello():
     return f"Hello, {user.name}!", 200
 
 
+@main.route('/user', methods=['GET'])
+@jwt_required()
+def current_user():
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(id=user_id).first()
+    return user.serialize(), 200
+
+
 @main.route('/todos', methods=['POST'], strict_slashes=False)
 @jwt_required()
 def add_todo():
