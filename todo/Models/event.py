@@ -63,4 +63,5 @@ class Event(db.Model):
             'date_end_timestamp': self.date_end_timestamp,
             'description': self.description,
             'is_done': self.is_done,
+            'tag_name': Tag.query.filter_by(id=self.tag_id).first().name
         }
