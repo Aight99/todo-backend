@@ -39,7 +39,12 @@ def signup():
     db.session.add(new_desk)
     db.session.commit()
     new_group = Group(
-        name="чевапчич",
+        name="Дом",
+        desk_id=new_desk.id
+    )
+    db.session.add(new_group)
+    new_group = Group(
+        name="Работа",
         desk_id=new_desk.id
     )
     db.session.add(new_group)
