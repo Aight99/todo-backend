@@ -206,7 +206,7 @@ def edit_column():
     request_data = request.get_json()
     column_id = request_data.get('id')
 
-    column_to_edit = Event.query.filter_by(id=column_id).first()
+    column_to_edit = Group.query.filter_by(id=column_id).first()
     if not column_to_edit:
         return "Ne exist", 404
 
