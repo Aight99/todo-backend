@@ -135,12 +135,13 @@ def edit_todo():
 def done_todo():
     request_data = request.get_json()
     todo_id = request_data.get('id')
+    is_done = request_data.get('is_done', True)
 
     todo_to_edit = Event.query.filter_by(id=todo_id).first()
     if not todo_to_edit:
         return "Ne exist", 404
 
-    todo_to_edit.is_done = True
+    todo_to_edit.is_done = is_done
     db.session.commit()
 
     return todo_to_edit.serialize(), 200
